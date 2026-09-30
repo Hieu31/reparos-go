@@ -110,20 +110,3 @@ reparos-go/
 ├── reparos_test.go         # Bộ Unit Tests
 └── README.md
 ```
-
----
-
-## 🚀 Đẩy Lên GitHub Repo Mới
-
-```bash
-cd "d:\New folder\QU-solution\reparos-go"
-
-git init
-git add .
-git commit -m "feat: initial release of reparos-go with zero-config & CLI"
-git tag v0.1.0
-
-git branch -M main
-git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPO_NAME>.git
-git push -u origin main --tags
-```
