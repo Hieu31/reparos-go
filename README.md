@@ -27,7 +27,7 @@ package main
 
 import (
     "fmt"
-    reparos "github.com/Hieu31/reparos-go"
+    "reparos"
 )
 
 func main() {

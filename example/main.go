@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	reparos "github.com/Hieu31/reparos-go"
+	"reparos"
 )
 
 func main() {

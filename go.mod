@@ -1,3 +1,3 @@
-module github.com/Hieu31/reparos-go
+module reparos
 
 go 1.21
