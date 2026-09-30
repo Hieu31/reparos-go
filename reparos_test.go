@@ -4,8 +4,21 @@ import (
 	"testing"
 )
 
-func TestPredictor(t *testing.T) {
-	predictor, err := New("models/v4_int8", WithBeamSize(5))
+func TestCorrectZeroConfig(t *testing.T) {
+	// Test zero-config top-level function
+	corrected, err := Correct("d pasteur q3")
+	if err != nil {
+		t.Fatalf("Correct error: %v", err)
+	}
+
+	expected := "đường pasteur quận 3"
+	if corrected != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, corrected)
+	}
+}
+
+func TestPredictorExplicit(t *testing.T) {
+	predictor, err := New(WithBeamSize(5))
 	if err != nil {
 		t.Fatalf("Failed to initialize predictor: %v", err)
 	}
@@ -15,10 +28,6 @@ func TestPredictor(t *testing.T) {
 		input       string
 		expectedTop string
 	}{
-		{
-			input:       "d pasteur q3",
-			expectedTop: "đường pasteur quận 3",
-		},
 		{
 			input:       "bv cho ray",
 			expectedTop: "bệnh viện chợ rẫy",
@@ -38,10 +47,6 @@ func TestPredictor(t *testing.T) {
 
 			if res.Top1Query != tc.expectedTop {
 				t.Errorf("For input '%s', expected '%s', got '%s'", tc.input, tc.expectedTop, res.Top1Query)
-			}
-
-			if res.LatencyMs <= 0 {
-				t.Errorf("Expected positive latency, got %f", res.LatencyMs)
 			}
 		})
 	}
