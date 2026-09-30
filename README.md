@@ -1,74 +1,135 @@
 # ReparoS-Go 🇻🇳
 
-Thư viện & Công cụ dòng lệnh **Golang** hiệu năng cao phục vụ chuẩn hóa, sửa lỗi chính tả và hiểu truy vấn tiếng Việt (**Vietnamese Query Understanding & Spell Correction**), sử dụng mô hình mạng nơ-ron Transformer **ReparoS Base v4 (CTranslate2 INT8)**.
+Thư viện Go và công cụ dòng lệnh (CLI) phục vụ **sửa lỗi chính tả, bù dấu tiếng Việt và chuẩn hóa địa chỉ/truy vấn tìm kiếm** (Vietnamese Query Understanding & Spell Correction), sử dụng mô hình nơ-ron Transformer **ReparoS Base v4 (CTranslate2 INT8)**.
 
-Mô hình siêu nhẹ chỉ **~8.6 MB**, được nhúng trực tiếp vào thư viện (**Zero-Config `//go:embed`**), mang lại độ trễ xử lý cực thấp (**~15ms – 25ms** trên 1 core CPU) mà không cần cấu hình đường dẫn file phức tạp.
-
----
-
-## 🌟 Tính Năng Nổi Bật
-
-* **Zero-Config (Plug & Play)**: Nhúng sẵn mô hình 8.6MB qua `//go:embed`. Gọi 1 hàm là chạy ngay, không cần tự copy file model.
-* **Cung cấp CLI Tool tiện lợi**: Cài đặt bằng `go install` để sửa lỗi chính tả trực tiếp ngay trong Terminal.
-* **Sửa lỗi chính tả & viết tắt phức tạp**:
-  * Tự động bù dấu tiếng Việt và sửa lỗi Telex/VNI: `d pasteur q3` $\rightarrow$ `đường pasteur quận 3`
-  * Chuẩn hóa từ viết tắt địa danh/hành chính: `bv cho ray` $\rightarrow$ `bệnh viện chợ rẫy`, `dh bach khoa tphcm` $\rightarrow$ `đại học bách khoa thành phố hồ chí minh`
-* **Hiệu năng cao**: Độ trễ ~20ms trên CPU với Beam Search 10 nhánh, tiêu tốn chỉ ~25-35MB RAM.
+Mô hình siêu nhẹ chỉ **~8.6 MB**, được nhúng trực tiếp vào thư viện (**`//go:embed`**), cho độ trễ xử lý cực nhanh (**~15ms – 25ms** trên 1 core CPU).
 
 ---
 
-## 💻 Cách Dùng Trong Code Go (Cực Kỳ Đơn Giản)
+## 📋 Yêu Cầu Hệ Thống (Prerequisites)
 
-### Cách 1: Dùng 1 dòng (Zero-Config)
-Người dùng tải về không cần truyền bất kỳ đường dẫn file nào:
+* **Go**: 1.21 trở lên.
+* **Python**: 3.9+ có sẵn thư viện `ctranslate2` và `sentencepiece`:
+  ```bash
+  pip install ctranslate2 sentencepiece
+  ```
 
+---
+
+## 🚀 Cách 1: Sử Dụng Trong Dự Án Go Của Bạn
+
+### 1. Cài đặt thư viện:
+Trong thư mục dự án Go của bạn, chạy lệnh:
+```bash
+go get github.com/Hieu31/reparos-go
+```
+
+### 2. Viết code sử dụng:
+Tạo file `main.go`:
 ```go
 package main
 
 import (
-    "fmt"
-    "reparos"
+	"fmt"
+	reparos "github.com/Hieu31/reparos-go"
 )
 
 func main() {
-    // Tự động sử dụng mô hình INT8 nhúng sẵn
-    res, _ := reparos.Correct("d pasteur q3")
-    fmt.Println(res) // "đường pasteur quận 3"
+	// Gọi trực tiếp hàm Correct (tự động nạp mô hình nhúng sẵn)
+	res, err := reparos.Correct("d pasteur q3")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(res)
+	// Output: đường pasteur quận 3
 }
 ```
 
-### Cách 2: Tùy biến tham số (Beam Size, Hypotheses)
-```go
-predictor, err := reparos.New(
-    reparos.WithBeamSize(10),       // Độ rộng Beam Search
-    reparos.WithNumHypotheses(3),   // Lấy top 3 câu gợi ý tốt nhất
-)
-defer predictor.Close()
-
-res, _ := predictor.Predict("bv cho ray")
-fmt.Printf("Top 1: %s (Độ trễ: %.2f ms)\n", res.Top1Query, res.LatencyMs)
+### 3. Chạy chương trình:
+```bash
+go run main.go
 ```
 
 ---
 
-## 🛠️ Cài Đặt Dưới Dạng Công Cụ Dòng Lệnh (CLI Tool)
+## 🛠️ Cách 2: Cài Đặt Làm Công Cụ Gõ Lệnh (CLI Tool)
 
-Bạn có thể cài đặt công cụ `reparos` vào máy tính chỉ bằng 1 lệnh Go duy nhất:
+Bạn có thể cài đặt công cụ `reparos` vào máy tính để dùng trực tiếp trong Terminal mà không cần viết code:
 
+### 1. Cài đặt lệnh toàn cầu:
 ```bash
-go install https://github.com/Hieu31/reparos-go/cmd/reparos@latest
+go install github.com/Hieu31/reparos-go/cmd/reparos@latest
 ```
 
-Sau khi cài đặt, bạn có thể gọi lệnh `reparos` ở bất kỳ đâu trong Terminal:
-
+### 2. Sử dụng ở bất kỳ đâu trong Terminal:
 ```bash
-# Sửa một câu trực tiếp:
+# Sửa một câu:
 reparos "bv cho ray"
 # Output: bệnh viện chợ rẫy
 
-# Xuất kết quả kèm độ trễ dưới dạng JSON:
+# Xuất kết quả chi tiết kèm độ trễ dưới dạng JSON:
 reparos -json "d pasteur q3"
 
 # Mở chế độ gõ tương tác (REPL):
 reparos
 ```
+
+---
+
+## ⚙️ Các Tùy Chọn Cấu Hình Nâng Cao
+
+Nếu bạn cần tinh chỉnh sâu hơn (như lấy nhiều gợi ý hoặc tối ưu tốc độ):
+
+```go
+package main
+
+import (
+	"fmt"
+	reparos "github.com/Hieu31/reparos-go"
+)
+
+func main() {
+	// Khởi tạo Predictor với cấu hình tùy chọn
+	predictor, err := reparos.New(
+		reparos.WithBeamSize(10),     // Độ rộng Beam Search (mặc định: 10)
+		reparos.WithNumHypotheses(3), // Lấy top 3 câu gợi ý tốt nhất
+	)
+	if err != nil {
+		panic(err)
+	}
+	defer predictor.Close()
+
+	res, _ := predictor.Predict("dh bach khoa tphcm")
+
+	fmt.Printf("Top 1: %s (Độ trễ: %.2f ms)\n", res.Top1Query, res.LatencyMs)
+	fmt.Println("Các gợi ý khác:", res.Hypotheses)
+}
+```
+
+### Danh sách các Option:
+| Hàm Option | Mặc định | Tác dụng |
+| :--- | :---: | :--- |
+| `reparos.WithBeamSize(n)` | `10` | Độ rộng Beam Search. Giảm xuống 2–3 để đạt tốc độ < 10ms (cho autocomplete). |
+| `reparos.WithNumHypotheses(n)` | `1` | Số lượng câu gợi ý trả về trong `res.Hypotheses`. |
+| `reparos.WithComputeType("int8")` | `"int8"` | Kiểu lượng hóa: `"int8"`, `"float16"`, `"float32"`. |
+| `reparos.WithDevice("cpu")` | `"cpu"` | Thiết bị tính toán: `"cpu"` hoặc `"cuda"` (nếu có GPU). |
+
+---
+
+## ⚡ Kết Quả Thực Nghiệm
+
+Đo đạc thực tế trên CPU đơn luồng (Intel / AMD thông thường):
+
+| Truy vấn đầu vào | Kết quả sau khi sửa | Độ trễ (Latency) |
+| :--- | :--- | :---: |
+| `bv cho ray` | **bệnh viện chợ rẫy** | **14.50 ms** |
+| `d pasteur q3` | **đường pasteur quận 3** | **18.20 ms** |
+| `nga tu hang xanh` | **ngã tư hàng xanh** | **16.44 ms** |
+| `duong so 1 binh tan` | **đường số 1 bình tân** | **27.69 ms** |
+| `san bay tan son nhat` | **sân bay quốc tế tân sơn nhất** | **27.37 ms** |
+
+---
+
+## 📄 License
+Phân phối theo giấy phép mã nguồn mở MIT.

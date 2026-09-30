@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"reparos"
+	reparos "github.com/Hieu31/reparos-go"
 )
 
 const version = "0.1.0"
