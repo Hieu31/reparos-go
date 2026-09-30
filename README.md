@@ -56,7 +56,7 @@ fmt.Printf("Top 1: %s (Độ trễ: %.2f ms)\n", res.Top1Query, res.LatencyMs)
 Bạn có thể cài đặt công cụ `reparos` vào máy tính chỉ bằng 1 lệnh Go duy nhất:
 
 ```bash
-go install github.com/username/reparos-go/cmd/reparos@latest
+go install https://github.com/Hieu31/reparos-go/cmd/reparos@latest
 ```
 
 Sau khi cài đặt, bạn có thể gọi lệnh `reparos` ở bất kỳ đâu trong Terminal:
