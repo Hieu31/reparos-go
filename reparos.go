@@ -192,51 +192,72 @@ func extractEmbeddedAssets() (string, string, error) {
 func (p *Predictor) initEngine(preferredRunner string) error {
 	var runnerPath = preferredRunner
 
-	if runnerPath == "" {
-		execDir, _ := os.Getwd()
-		possiblePaths := []string{
-			filepath.Join(execDir, "internal", "runner", "runner.py"),
-			filepath.Join(p.modelDir, "..", "internal", "runner", "runner.py"),
-			filepath.Join(p.modelDir, "..", "..", "internal", "runner", "runner.py"),
-		}
+	// 1. Try to find Standalone Native Engine binary (Zero Python Required)
+	cacheBase, _ := os.UserCacheDir()
+	execDir, _ := os.Getwd()
+	possibleEngines := []string{
+		filepath.Join(cacheBase, "reparos-go", "engine", "reparos_engine.exe"),
+		filepath.Join(cacheBase, "reparos-go", "engine", "reparos_engine"),
+		filepath.Join(execDir, "internal", "engine", "reparos_engine.exe"),
+		filepath.Join(execDir, "internal", "engine", "reparos_engine"),
+		filepath.Join(p.modelDir, "..", "internal", "engine", "reparos_engine.exe"),
+	}
 
-		for _, path := range possiblePaths {
-			if _, err := os.Stat(path); err == nil {
-				runnerPath = path
-				break
+	var engineCmd *exec.Cmd
+	for _, eng := range possibleEngines {
+		if _, err := os.Stat(eng); err == nil {
+			engineCmd = exec.Command(eng, p.modelDir, p.opts.Device, p.opts.ComputeType)
+			break
+		}
+	}
+
+	// 2. If no standalone engine, fallback to Python / UV runner
+	if engineCmd == nil {
+		if runnerPath == "" {
+			possiblePaths := []string{
+				filepath.Join(execDir, "internal", "runner", "runner.py"),
+				filepath.Join(p.modelDir, "..", "internal", "runner", "runner.py"),
+				filepath.Join(p.modelDir, "..", "..", "internal", "runner", "runner.py"),
+			}
+
+			for _, path := range possiblePaths {
+				if _, err := os.Stat(path); err == nil {
+					runnerPath = path
+					break
+				}
 			}
 		}
+
+		if runnerPath == "" {
+			return errors.New("cannot locate inference engine or runner.py")
+		}
+
+		if _, err := exec.LookPath("uv"); err == nil {
+			// uv can auto-provision ctranslate2 and sentencepiece on the fly
+			engineCmd = exec.Command("uv", "run", "--python", "3.11", "--with", "ctranslate2", "--with", "sentencepiece", "python", runnerPath, p.modelDir, p.opts.Device, p.opts.ComputeType)
+		} else if _, err := exec.LookPath("python3"); err == nil {
+			engineCmd = exec.Command("python3", runnerPath, p.modelDir, p.opts.Device, p.opts.ComputeType)
+		} else {
+			engineCmd = exec.Command("python", runnerPath, p.modelDir, p.opts.Device, p.opts.ComputeType)
+		}
 	}
 
-	if runnerPath == "" {
-		return errors.New("cannot locate internal/runner/runner.py")
-	}
-
-	// Choose python executable
-	var pyCmd *exec.Cmd
-	if _, err := exec.LookPath("uv"); err == nil {
-		pyCmd = exec.Command("uv", "run", "python", runnerPath, p.modelDir, p.opts.Device, p.opts.ComputeType)
-	} else if _, err := exec.LookPath("python3"); err == nil {
-		pyCmd = exec.Command("python3", runnerPath, p.modelDir, p.opts.Device, p.opts.ComputeType)
-	} else {
-		pyCmd = exec.Command("python", runnerPath, p.modelDir, p.opts.Device, p.opts.ComputeType)
-	}
-
-	stdin, err := pyCmd.StdinPipe()
+	stdin, err := engineCmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("failed to open stdin pipe: %w", err)
 	}
 
-	stdoutPipe, err := pyCmd.StdoutPipe()
+	stdoutPipe, err := engineCmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to open stdout pipe: %w", err)
 	}
 
-	pyCmd.Stderr = os.Stderr
+	engineCmd.Stderr = os.Stderr
 
-	if err := pyCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start inference runner: %w", err)
+	if err := engineCmd.Start(); err != nil {
+		return fmt.Errorf("failed to start inference engine: %w", err)
 	}
+
 
 	reader := bufio.NewReader(stdoutPipe)
 
@@ -258,15 +279,15 @@ func (p *Predictor) initEngine(preferredRunner string) error {
 	select {
 	case err := <-readyChan:
 		if err != nil {
-			pyCmd.Process.Kill()
+			engineCmd.Process.Kill()
 			return err
 		}
 	case <-time.After(15 * time.Second):
-		pyCmd.Process.Kill()
+		engineCmd.Process.Kill()
 		return errors.New("inference runner startup timed out after 15s")
 	}
 
-	p.cmd = pyCmd
+	p.cmd = engineCmd
 	p.stdin = stdin
 	p.stdout = reader
 	return nil
