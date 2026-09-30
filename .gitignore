@@ -1,0 +1,23 @@
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# C/C++ build artifacts
+bridge/build/
+*.o
+*.obj
+
+# Python caches
+__pycache__/
+*.pyc
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
