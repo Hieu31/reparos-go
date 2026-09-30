@@ -29,6 +29,10 @@ def main():
 
     translator = ctranslate2.Translator(model_dir, device=device, compute_type=compute_type)
 
+    # Warmup OpenMP thread pool and CPU cache
+    warm_pieces = sp.encode("khoi dong", out_type=str)
+    translator.translate_batch([warm_pieces], beam_size=2)
+
     # Signal ready
     sys.stdout.write("READY\n")
     sys.stdout.flush()
@@ -46,10 +50,12 @@ def main():
 
             t0 = time.perf_counter()
             pieces = sp.encode(query, out_type=str)
+            max_len = min(max(len(pieces) * 2 + 6, 12), 60)
             res = translator.translate_batch(
                 [pieces],
                 beam_size=beam_size,
                 num_hypotheses=num_hypotheses,
+                max_decoding_length=max_len,
                 return_scores=True
             )[0]
 

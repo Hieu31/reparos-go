@@ -12,15 +12,12 @@ func main() {
 	fmt.Println("🚀 REPAROS-GO: SỬA LỖI CHÍNH TẢ & CHUẨN HÓA TRUY VẤN")
 	fmt.Println("==================================================")
 
-	// 1. Cách dùng 1 dòng siêu gọn (Zero-Config / Plug & Play)
-	// Tự động sử dụng model INT8 nhúng sẵn, không cần truyền bất kỳ đường dẫn nào!
 	corrected, err := reparos.Correct("d pasteur q3")
 	if err != nil {
 		log.Fatalf("Lỗi: %v", err)
 	}
 	fmt.Printf("✓ Sửa nhanh: 'd pasteur q3' => '%s'\n\n", corrected)
 
-	// 2. Chạy thử nghiệm danh sách các truy vấn thực tế
 	queries := []string{
 		"bv cho ray",
 		"nga tu hang xanh",
