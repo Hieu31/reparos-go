@@ -8,6 +8,12 @@ if(MSVC)
     # Pass the standard as a flag: the CMake files of Abseil/SentencePiece use an old
     # cmake_minimum_required, so CMAKE_CXX_STANDARD is ignored by their feature checks.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /Zc:__cplusplus /utf-8 /bigobj")
+
+    # CTranslate2 builds static libs with the static CRT (/MT); every object linked
+    # into the DLL must use the same runtime. SentencePiece has its own switch since
+    # its old cmake_minimum_required makes it ignore CMAKE_MSVC_RUNTIME_LIBRARY.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(SPM_ENABLE_MSVC_MT_BUILD ON CACHE BOOL "" FORCE)
 endif()
 
 if(UNIX)
