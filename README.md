@@ -6,13 +6,10 @@ Mô hình siêu nhẹ chỉ **~8.6 MB**, được nhúng trực tiếp vào thư
 
 ---
 
-## 📋 Yêu Cầu Hệ Thống (Prerequisites)
+## 📋 Yêu Cầu Hệ Thống
 
-* **Go**: 1.21 trở lên.
-* **Python**: 3.9+ có sẵn thư viện `ctranslate2` và `sentencepiece`:
-  ```bash
-  pip install ctranslate2 sentencepiece
-  ```
+* **Go** 1.21 trở lên. Không cần cài thêm gì khác.
+* Lần chạy đầu tiên cần mạng để tự tải engine (một lần, sau đó lưu cache).
 
 ---
 
@@ -114,12 +111,13 @@ func main() {
 | `reparos.WithNumHypotheses(n)` | `1` | Số lượng câu gợi ý trả về trong `res.Hypotheses`. |
 | `reparos.WithComputeType("int8")` | `"int8"` | Kiểu lượng hóa: `"int8"`, `"float16"`, `"float32"`. |
 | `reparos.WithDevice("cpu")` | `"cpu"` | Thiết bị tính toán: `"cpu"` hoặc `"cuda"` (nếu có GPU). |
+| `reparos.WithThreads(intra, inter)` | `0, 1` | Số luồng mỗi lượt dịch / số lượt dịch chạy song song. |
 
 ---
 
 ## ⚡ Kết Quả Thực Nghiệm
 
-Đo đạc thực tế trên CPU đơn luồng (Intel / AMD thông thường):
+Đo đạc thực tế trên CPU đơn luồng (Intel / AMD thông thường).
 
 | Truy vấn đầu vào | Kết quả sau khi sửa | Độ trễ (Latency) |
 | :--- | :--- | :---: |
