@@ -32,6 +32,12 @@ jobs:
           - platform: windows-amd64
             os: windows-latest
             lib: reparos_bridge.dll
+          - platform: darwin-arm64
+            os: macos-15
+            lib: reparos_bridge.dylib
+          - platform: darwin-amd64
+            os: macos-15-intel
+            lib: reparos_bridge.dylib
 
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +53,8 @@ jobs:
         run: |
           args=(-S bridge -B build -DCT2_SOURCE_DIR="$PWD/third_party/CTranslate2" -DSP_SOURCE_DIR="$PWD/third_party/sentencepiece" -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
           if [ "$RUNNER_OS" = "Windows" ]; then args+=(-A x64); else args+=(-DCMAKE_BUILD_TYPE=Release); fi
+          # Without this the dylib would require the runner's macOS version (15).
+          if [ "$RUNNER_OS" = "macOS" ]; then args+=(-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0); fi
           cmake "${args[@]}"
 
       - name: Build
@@ -66,7 +74,11 @@ jobs:
           cp "$f" "dist/reparos_bridge-$PLATFORM.$ext"
           cp "$f" "dist/$LIB"
           cd dist
-          sha256sum "reparos_bridge-$PLATFORM.$ext" > "SHA256SUMS-$PLATFORM.txt"
+          if command -v sha256sum >/dev/null; then
+            sha256sum "reparos_bridge-$PLATFORM.$ext" > "SHA256SUMS-$PLATFORM.txt"
+          else
+            shasum -a 256 "reparos_bridge-$PLATFORM.$ext" > "SHA256SUMS-$PLATFORM.txt"
+          fi
           ls -l
 
       - uses: actions/setup-go@v5

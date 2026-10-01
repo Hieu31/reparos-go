@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-//go:embed models/v4_int8/* internal/runner/runner.py
+//go:embed models/v4_int8/*
 var embeddedFS embed.FS
 
 // Result contains the spell correction output and metadata.
@@ -91,15 +91,13 @@ func New(args ...any) (*Predictor, error) {
 		opt(&opts)
 	}
 
-	var runnerPath string
 	if modelDir == "" {
 		// Use embedded model
-		extractedModelDir, extractedRunner, err := extractEmbeddedAssets()
+		extractedModelDir, err := extractEmbeddedModel()
 		if err != nil {
 			return nil, fmt.Errorf("failed to prepare embedded model: %w", err)
 		}
 		modelDir = extractedModelDir
-		runnerPath = extractedRunner
 	}
 
 	absModelDir, err := filepath.Abs(modelDir)
@@ -122,33 +120,27 @@ func New(args ...any) (*Predictor, error) {
 		modelDir: absModelDir,
 	}
 
-	if err := p.initEngine(runnerPath); err != nil {
+	if err := p.initEngine(); err != nil {
 		return nil, err
 	}
 
 	return p, nil
 }
 
-func extractEmbeddedAssets() (string, string, error) {
+func extractEmbeddedModel() (string, error) {
 	cacheBase, err := os.UserCacheDir()
 	if err != nil {
 		cacheBase = os.TempDir()
 	}
 
 	targetDir := filepath.Join(cacheBase, "reparos-go", "models", "v4_int8")
-	runnerDir := filepath.Join(cacheBase, "reparos-go", "runner")
-
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		return "", "", err
-	}
-	if err := os.MkdirAll(runnerDir, 0755); err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	// Extract models
 	entries, err := fs.ReadDir(embeddedFS, "models/v4_int8")
 	if err != nil {
-		return "", "", fmt.Errorf("failed to read embedded models: %w", err)
+		return "", fmt.Errorf("failed to read embedded models: %w", err)
 	}
 
 	for _, entry := range entries {
@@ -163,50 +155,31 @@ func extractEmbeddedAssets() (string, string, error) {
 
 		data, err := embeddedFS.ReadFile("models/v4_int8/" + entry.Name())
 		if err != nil {
-			return "", "", err
+			return "", err
 		}
 		if err := os.WriteFile(destPath, data, 0644); err != nil {
-			return "", "", err
+			return "", err
 		}
 	}
-
-	// Extract runner.py
-	runnerDest := filepath.Join(runnerDir, "runner.py")
-	runnerData, err := embeddedFS.ReadFile("internal/runner/runner.py")
-	if err == nil {
-		os.WriteFile(runnerDest, runnerData, 0644)
-	}
-
-	return targetDir, runnerDest, nil
+	return targetDir, nil
 }
 
-// initEngine prefers the in-process native bridge and falls back to the
-// legacy child-process backend only when no native library can be found.
-func (p *Predictor) initEngine(runnerPath string) error {
+// initEngine loads the native bridge library: an explicit path, a cached or
+// nearby copy, or a prebuilt one downloaded from the GitHub Release.
+func (p *Predictor) initEngine() error {
 	libPath, err := findNativeLib(p.opts.NativeLibPath)
 	if errors.Is(err, errNativeNotFound) {
 		var dlErr error
-		if libPath, dlErr = downloadNativeLib(); dlErr == nil {
-			err = nil
-		} else if !errors.Is(dlErr, errNativeNotFound) {
-			err = fmt.Errorf("%w; auto-download failed: %v", err, dlErr)
+		if libPath, dlErr = downloadNativeLib(); dlErr != nil {
+			return fmt.Errorf("no native engine for %s: %v; build bridge/ and point WithNativeLib or REPAROS_NATIVE_LIB at it", nativePlatform(), dlErr)
 		}
-	}
-	if err == nil {
-		eng, err := newNativeEngine(libPath, p.modelDir, p.opts)
-		if err != nil {
-			return err
-		}
-		p.eng = eng
-		return nil
-	}
-	if !errors.Is(err, errNativeNotFound) {
+	} else if err != nil {
 		return err
 	}
 
-	eng, perr := newProcessEngine(p.modelDir, runnerPath, p.opts)
-	if perr != nil {
-		return fmt.Errorf("%w (set WithNativeLib or REPAROS_NATIVE_LIB to %s); fallback engine failed: %v", err, nativeLibName(), perr)
+	eng, err := newNativeEngine(libPath, p.modelDir, p.opts)
+	if err != nil {
+		return err
 	}
 	p.eng = eng
 	return nil
@@ -214,6 +187,9 @@ func (p *Predictor) initEngine(runnerPath string) error {
 
 // Predict returns the corrected query result. It is safe for concurrent use.
 func (p *Predictor) Predict(query string) (*Result, error) {
+	if p == nil || p.eng == nil {
+		return nil, errors.New("predictor is not initialized (check the error returned by New)")
+	}
 	start := time.Now()
 	res, err := p.eng.predict(query, p.opts.BeamSize, p.opts.NumHypotheses)
 	if err != nil {
@@ -229,5 +205,8 @@ func (p *Predictor) Predict(query string) (*Result, error) {
 
 // Close releases the engine and its resources.
 func (p *Predictor) Close() error {
+	if p == nil || p.eng == nil {
+		return nil
+	}
 	return p.eng.close()
 }

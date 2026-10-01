@@ -3,6 +3,7 @@ package reparos
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,7 +26,7 @@ func nativePlatform() string {
 // REPAROS_NO_DOWNLOAD=1 to disable.
 func downloadNativeLib() (string, error) {
 	if os.Getenv("REPAROS_NO_DOWNLOAD") != "" {
-		return "", errNativeNotFound
+		return "", errors.New("auto-download disabled by REPAROS_NO_DOWNLOAD")
 	}
 	cache, err := os.UserCacheDir()
 	if err != nil {
