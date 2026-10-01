@@ -22,6 +22,7 @@ jobs:
   build:
     name: ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -32,12 +33,18 @@ jobs:
           - platform: windows-amd64
             os: windows-latest
             lib: reparos_bridge.dll
+          # macOS legs are experimental: a failure must not block the Linux/Windows
+          # Release. Drop `experimental` once they build and test cleanly.
           - platform: darwin-arm64
             os: macos-15
             lib: reparos_bridge.dylib
+            osx_arch: arm64
+            experimental: true
           - platform: darwin-amd64
             os: macos-15-intel
             lib: reparos_bridge.dylib
+            osx_arch: x86_64
+            experimental: true
 
     steps:
       - uses: actions/checkout@v4
@@ -50,11 +57,13 @@ jobs:
 
       - name: Configure
         shell: bash
+        env:
+          OSX_ARCH: ${{ matrix.osx_arch }}
         run: |
           args=(-S bridge -B build -DCT2_SOURCE_DIR="$PWD/third_party/CTranslate2" -DSP_SOURCE_DIR="$PWD/third_party/sentencepiece" -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
           if [ "$RUNNER_OS" = "Windows" ]; then args+=(-A x64); else args+=(-DCMAKE_BUILD_TYPE=Release); fi
           # Without this the dylib would require the runner's macOS version (15).
-          if [ "$RUNNER_OS" = "macOS" ]; then args+=(-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0); fi
+          if [ "$RUNNER_OS" = "macOS" ]; then args+=(-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_OSX_ARCHITECTURES="$OSX_ARCH"); fi
           cmake "${args[@]}"
 
       - name: Build

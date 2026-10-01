@@ -18,6 +18,12 @@ if(MSVC)
     set(ABSL_MSVC_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
 endif()
 
+if(APPLE)
+    # AppleClang defaults to an older standard and Abseil's feature check ignores
+    # CMAKE_CXX_STANDARD (see the MSVC note above), so pass the flag explicitly.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+endif()
+
 if(UNIX)
     # Everything is linked into one shared object, so all static deps must be PIC.
     # CTranslate2's own CMake unsets CMAKE_POSITION_INDEPENDENT_CODE for static
