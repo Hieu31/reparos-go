@@ -2,12 +2,15 @@ package reparos
 
 // Options holds configuration for the predictor.
 type Options struct {
-	BeamSize       int
-	NumHypotheses  int
-	Device         string
-	ComputeType    string
-	NativeLibPath  string
-	UseNativeCGo   bool
+	BeamSize      int
+	NumHypotheses int
+	Device        string
+	ComputeType   string
+	NativeLibPath string
+	// IntraThreads is the number of threads used by one translation (0 = library default).
+	IntraThreads int
+	// InterThreads is the number of translations that may run in parallel (0 = 1).
+	InterThreads int
 }
 
 // DefaultOptions returns the default production options.
@@ -59,6 +62,13 @@ func WithComputeType(computeType string) Option {
 func WithNativeLib(path string) Option {
 	return func(o *Options) {
 		o.NativeLibPath = path
-		o.UseNativeCGo = true
+	}
+}
+
+// WithThreads sets threads per translation (intra) and parallel translations (inter).
+func WithThreads(intra, inter int) Option {
+	return func(o *Options) {
+		o.IntraThreads = intra
+		o.InterThreads = inter
 	}
 }
