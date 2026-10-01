@@ -4,15 +4,24 @@ project(reparos_bridge CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+if(UNIX)
+    # Everything is linked into one shared object, so all static deps must be PIC.
+    # CTranslate2's own CMake unsets CMAKE_POSITION_INDEPENDENT_CODE for static
+    # builds, so force the flag globally.
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
 add_library(reparos_bridge SHARED bridge.cpp)
 target_compile_definitions(reparos_bridge PRIVATE REPAROS_EXPORTS)
-set_target_properties(reparos_bridge PROPERTIES OUTPUT_NAME "reparos_bridge" PREFIX "")
+set_target_properties(reparos_bridge PROPERTIES
+    OUTPUT_NAME "reparos_bridge"
+    PREFIX ""
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON)
 
 if(CT2_SOURCE_DIR AND SP_SOURCE_DIR)
     # Self-contained build: compile CTranslate2 and SentencePiece from source and
@@ -38,9 +47,18 @@ if(CT2_SOURCE_DIR AND SP_SOURCE_DIR)
     add_subdirectory(${CT2_SOURCE_DIR} ctranslate2 EXCLUDE_FROM_ALL)
     add_subdirectory(${SP_SOURCE_DIR} sentencepiece EXCLUDE_FROM_ALL)
 
+    # sentencepiece_processor.h includes "third_party/absl/...". SentencePiece links
+    # that directory to its bundled abseil at configure time; copy it if that failed
+    # (e.g. symlinks unavailable on Windows).
+    if(NOT EXISTS ${SP_SOURCE_DIR}/third_party/absl)
+        file(COPY ${SP_SOURCE_DIR}/third_party/abseil-cpp/absl DESTINATION ${SP_SOURCE_DIR}/third_party)
+    endif()
+
     target_include_directories(reparos_bridge PRIVATE
         ${CT2_SOURCE_DIR}/include
-        ${SP_SOURCE_DIR}/src)
+        ${SP_SOURCE_DIR}
+        ${SP_SOURCE_DIR}/src
+        ${SP_SOURCE_DIR}/third_party/abseil-cpp)
     target_link_libraries(reparos_bridge PRIVATE ctranslate2 sentencepiece-static)
 else()
     # Link against already-installed libraries: -DCT2_ROOT=... -DSP_ROOT=...

@@ -111,7 +111,7 @@ func main() {
 | `reparos.WithNumHypotheses(n)` | `1` | Số lượng câu gợi ý trả về trong `res.Hypotheses`. |
 | `reparos.WithComputeType("int8")` | `"int8"` | Kiểu lượng hóa: `"int8"`, `"float16"`, `"float32"`. |
 | `reparos.WithDevice("cpu")` | `"cpu"` | Thiết bị tính toán: `"cpu"` hoặc `"cuda"` (nếu có GPU). |
-| `reparos.WithThreads(intra, inter)` | `0, 1` | Số luồng mỗi lượt dịch / số lượt dịch chạy song song. |
+| `reparos.WithThreads(intra, inter)` | `1, min(CPU,4)` | Số luồng mỗi lượt dịch / số lượt dịch chạy song song. |
 
 ---
 

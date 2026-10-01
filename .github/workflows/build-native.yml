@@ -45,7 +45,7 @@ jobs:
       - name: Configure
         shell: bash
         run: |
-          args=(-S bridge -B build -DCT2_SOURCE_DIR="$PWD/third_party/CTranslate2" -DSP_SOURCE_DIR="$PWD/third_party/sentencepiece")
+          args=(-S bridge -B build -DCT2_SOURCE_DIR="$PWD/third_party/CTranslate2" -DSP_SOURCE_DIR="$PWD/third_party/sentencepiece" -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
           if [ "$RUNNER_OS" = "Windows" ]; then args+=(-A x64); else args+=(-DCMAKE_BUILD_TYPE=Release); fi
           cmake "${args[@]}"
 

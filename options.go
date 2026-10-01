@@ -1,5 +1,7 @@
 package reparos
 
+import "runtime"
+
 // Options holds configuration for the predictor.
 type Options struct {
 	BeamSize      int
@@ -7,9 +9,11 @@ type Options struct {
 	Device        string
 	ComputeType   string
 	NativeLibPath string
-	// IntraThreads is the number of threads used by one translation (0 = library default).
+	// IntraThreads is the number of threads used by one translation (default 1;
+	// 0 lets the engine use every core, which hurts tail latency on short queries).
 	IntraThreads int
-	// InterThreads is the number of translations that may run in parallel (0 = 1).
+	// InterThreads is the number of translations that may run in parallel
+	// (default min(NumCPU, 4)).
 	InterThreads int
 }
 
@@ -20,6 +24,10 @@ func DefaultOptions() Options {
 		NumHypotheses: 1,
 		Device:        "cpu",
 		ComputeType:   "int8",
+		// One thread per translation: multi-threading a short query makes tail
+		// latency far worse. Throughput comes from running translations in parallel.
+		IntraThreads: 1,
+		InterThreads: min(runtime.NumCPU(), 4),
 	}
 }
 

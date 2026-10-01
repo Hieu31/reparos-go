@@ -65,7 +65,7 @@ int reparos_create(
 
         const size_t replicas = inter_threads > 0 ? static_cast<size_t>(inter_threads) : 1;
         engine->translator = std::make_unique<ctranslate2::Translator>(
-            model_dir, dev, ct, std::vector<int>(replicas, 0), pool);
+            model_dir, dev, ct, std::vector<int>(replicas, 0), /*tensor_parallel=*/false, pool);
 
         // Warm up thread pool and CPU caches so the first request is not slow.
         std::vector<std::string> pieces;
