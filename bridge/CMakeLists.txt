@@ -4,6 +4,12 @@ project(reparos_bridge CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+if(MSVC)
+    # Pass the standard as a flag: the CMake files of Abseil/SentencePiece use an old
+    # cmake_minimum_required, so CMAKE_CXX_STANDARD is ignored by their feature checks.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /Zc:__cplusplus /utf-8 /bigobj")
+endif()
+
 if(UNIX)
     # Everything is linked into one shared object, so all static deps must be PIC.
     # CTranslate2's own CMake unsets CMAKE_POSITION_INDEPENDENT_CODE for static
