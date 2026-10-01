@@ -14,6 +14,8 @@ if(MSVC)
     # its old cmake_minimum_required makes it ignore CMAKE_MSVC_RUNTIME_LIBRARY.
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     set(SPM_ENABLE_MSVC_MT_BUILD ON CACHE BOOL "" FORCE)
+    # Abseil overrides CMAKE_MSVC_RUNTIME_LIBRARY itself unless told otherwise.
+    set(ABSL_MSVC_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
 endif()
 
 if(UNIX)
